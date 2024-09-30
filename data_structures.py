@@ -1,10 +1,17 @@
 # from typing import NameTuple
 from collections import namedtuple
+from enum import Enum
+import hashlib
 
 Request = namedtuple("Request", "reqType args")
 
+class ReqStatus(Enum):
+    SUCCESS = 0
+    FAILURE = 1
+
 def getHash(chunk):
-    return 0
+    return hashlib.sha1(str.encode()).hexdigest() 
+
 
 # class Request():
 #     def __init__(self,reqType,args):
@@ -30,23 +37,20 @@ class ChunkInfo():
         }
 
 class FileMetadata():
-    def __init__(self,fileName,size):
+    def __init__(self,fileName,size,peerId,file):
         self.fileName = fileName
         self.size = size
-    
-    def chunkize(self,file,peerID):
-        # chunk the file
-        # self.chunkInfo = [] # index is chunkID, value is ??? chunk,hash??
         for i in range(1,10):
             chunkData = 1 # divide the file somehow 
-            hashh = getHash(chunk)
-            peers = [peerID]
+            hashh = getHash(chunkData)
+            peers = [peerId]
             self.chunkInfo[i] = ChunkInfo(chunkData, hashh, peers)
+        #TODO 
     
     def toDict(self):
         return {
-            "fileName": self.fileName
-            "size": self.size
+            "fileName": self.fileName,
+            "size": self.size,
             "chunkInfo": [chunk.toDict() for chunk in self.ChunkInfo]
         }
 

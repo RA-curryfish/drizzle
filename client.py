@@ -1,26 +1,30 @@
 import socket
 import json
+from data_structures import *
 
 SERVER_PORT = 99999
 SERVER_NAME = "localhost"
 
-def getFileSize(fileName):
-    return 0
+locFileMetadataList = [] # list of fileMetadata
+globFileMetadataList = [] # list of fileMetadata
 
+# Calls to server API
 def registerNode(fileList):
     #Send register request to server - pass IP address, and file list
     #Get register status - success or failure
 
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    peerID = socket.gethostname()
+    peerIP = socket.gethostname() #TODO client own IP, check
+    #TODO check port to pass
     client_socket.connect((SERVER_NAME,SERVER_PORT))
     file_data = [
         locFileMetadataList
     ]
-    request = Request("RegisterNode",[peerID, locFileMetadataList.keys()]) 
+    locFileNames = map(lambda x: x.fileName, locFileMetadataList)
+    request = Request("RegisterNode",[peerID, locFileNames]) 
 
-    for file in fileList:
-        chunks = chunkize(file)
+    for fileName in fileList:
+        fileMetadata = FileMetadata(fileName, getFileSize(fileName), peerIP, getFile(fileName))
         chunkID = 0 
         for chunk in chunks:
             registerChunk(file,chunkID,chunk)
@@ -63,6 +67,7 @@ def uploadChunk(fileName,chunkID):
     pass
 
 def modifyChunk(fileName,chunkID):
+    #Can we do this?    
     pass
 
 def downloadFile():
@@ -72,5 +77,11 @@ def downloadFile():
     #once chunk is received, verify the chunk 
     pass
 
-locFileMetadataList = [] # list of fileMetadata
-globFileMetadataList = [] # list of fileMetadata
+#Local functionality
+def getFileSize(fileName):
+    # TODO implement
+    return 0
+
+def getFile(fileName):
+    #TODO implement
+    pass

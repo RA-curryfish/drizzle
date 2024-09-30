@@ -1,13 +1,19 @@
 import socket
+import pickle
+
+from data_structures import *
 SERVER_PORT = 99999
 SERVER_NAME = "localhost"
+
+peerList = [] # list of peers ??? needed???
+fileList = [] # stores file list
+fileMetadataList = []
 
 def registerNode(peerID,localFileList):
     #REturn register status - success or failure
     peerList.append(peerID)
     fileList.append(localFileList)
-
-    return success
+    return ReqStatus.SUCCESS
 
 def getFileList():
     #REturn list of file names
@@ -18,14 +24,16 @@ def getFileMetadata(fileName):
     return fileMetadataList[fileName]
 
 def registerFile(fileMetaData, peerID):
-    # recieves file meta datacalls registerChunk
+    # recieves file meta data
     fileMetaDataList[fileName] = FileMetadata(fileMetaData.fileName, fileMetaData.size)
     for chunkInfo in fileMetaData.chunkInfo:
         registerChunk(fileMetaData.fileName,chunkInfo.chunkID, peerID)
+    return ReqStatus.SUCCESS
     
 def registerChunk(fileName,chunkID,peerID):
     #Return register status
     fileMetadataList[fileName].addPeer(chunkID,peerID)
+    return ReqStatus.SUCCESS
 
 def processRequest(request):
     #Get request type
@@ -34,16 +42,22 @@ def processRequest(request):
         #Get file lists
         #Get file info
         #Chunk register request
+    #TODO call the appropriate fn and do marshalling
+    out = None
+    serializedOut = pickle.dumps(out) 
+    return serializedOut
+
+
+def initServer():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((SERVER_NAME,SERVER_PORT))
-    server_socket.listen(10)
-
+    server_socket.listen(10) #Max 10 peers in the queue
     while True:
         client_socket, addr = server_socket.accept()
-
+        print(f"Received req from client: {client_socket}, {addr}")
         req = server_socket.recv(4096) # send object here?? encoded???
+        reqResponse = processRequest(req)
+        client_socket.send(reqResponse)
 
-
-peerList = [] # list of peers ??? needed???
-fileList = [] # stores file list
-fileMetadataList = []
+if __name__ == "__main__":
+    initServer()
