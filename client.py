@@ -1,19 +1,30 @@
+import socket
+import json
+
+SERVER_PORT = 99999
+SERVER_NAME = "localhost"
+
 def getFileSize(fileName):
     return 0
 
 def registerNode(fileList):
-    #Send register request to server - pass IP address, and metadata for all the files you have
+    #Send register request to server - pass IP address, and file list
     #Get register status - success or failure
-    #
-    # send bytes on socket
-    #
+
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    peerID = socket.gethostname()
+    client_socket.connect((SERVER_NAME,SERVER_PORT))
+    file_data = [
+        locFileMetadataList
+    ]
+    request = Request("RegisterNode",[peerID, locFileMetadataList.keys()]) 
+
     for file in fileList:
         chunks = chunkize(file)
         chunkID = 0 
         for chunk in chunks:
             registerChunk(file,chunkID,chunk)
             chunkID += 1
-    pass
 
 def getFileList():
     #Send get file list request to server
@@ -61,5 +72,5 @@ def downloadFile():
     #once chunk is received, verify the chunk 
     pass
 
-locFileMetadataList = {} # list of fileMetadata
+locFileMetadataList = [] # list of fileMetadata
 globFileMetadataList = [] # list of fileMetadata

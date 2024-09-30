@@ -16,20 +16,39 @@ def getHash(chunk):
 #         self.chunkID = chunkID
 #         self.peerList = peerList
 
+class ChunkInfo():
+    def __init__(self, chunkData, hashValue, peers):
+        self.chunkData = chunkData  # Chunk data (e.g., bytes or a string)
+        self.hashValue = hashValue  # Hash value of the chunk (e.g., string)
+        self.peers = peers          # List of peers that contain this chunk
+
+    def toDict(self):
+        return {
+            "chunkData": self.chunkData,
+            "hashValue": self.hashValue,
+            "peers": self.peers  # Assuming peers is a list of strings (peer addresses)
+        }
+
 class FileMetadata():
     def __init__(self,fileName,size):
         self.fileName = fileName
         self.size = size
     
-    def chunkize(file,peerID):
+    def chunkize(self,file,peerID):
         # chunk the file
-        self.chunkInfo = [] # index is chunkID, value is ??? chunk,hash??
+        # self.chunkInfo = [] # index is chunkID, value is ??? chunk,hash??
         for i in range(1,10):
-            chunk = 1 # divide the file somehow 
-            self.chunkID
-            self.chunkInfo[i].chunk = chunk
-            self.chunkInfo[i].hash = getHash(chunk)
-            self.chunkInfo[i].peerList.append(peerID)
+            chunkData = 1 # divide the file somehow 
+            hashh = getHash(chunk)
+            peers = [peerID]
+            self.chunkInfo[i] = ChunkInfo(chunkData, hashh, peers)
     
+    def toDict(self):
+        return {
+            "fileName": self.fileName
+            "size": self.size
+            "chunkInfo": [chunk.toDict() for chunk in self.ChunkInfo]
+        }
+
     def addPeer(self,chunkID,peerID):
-        self.chunkInfo[chunkID].peerList.append(peerID)
+        self.chunkInfo[chunkID].peers.append(peerID)

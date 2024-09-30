@@ -1,9 +1,13 @@
-def registerNode(peerID,fileList):
+import socket
+SERVER_PORT = 99999
+SERVER_NAME = "localhost"
+
+def registerNode(peerID,localFileList):
     #REturn register status - success or failure
     peerList.append(peerID)
-    fileList.append(fileList)
+    fileList.append(localFileList)
+
     return success
-    pass
 
 def getFileList():
     #REturn list of file names
@@ -30,7 +34,15 @@ def processRequest(request):
         #Get file lists
         #Get file info
         #Chunk register request
-    pass
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((SERVER_NAME,SERVER_PORT))
+    server_socket.listen(10)
+
+    while True:
+        client_socket, addr = server_socket.accept()
+
+        req = server_socket.recv(4096) # send object here?? encoded???
+
 
 peerList = [] # list of peers ??? needed???
 fileList = [] # stores file list
