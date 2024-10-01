@@ -1,13 +1,14 @@
 import socket
-import pickle
+import threading
 
 from data_structures import *
+
 SERVER_PORT = 99999
 SERVER_NAME = "localhost"
 
 peerList = [] # list of peers ??? needed???
 fileList = [] # stores file list
-fileMetadataList = []
+fileMetadataList = dict() #Filename(str) to FileMetadata object
 
 def registerNode(peerID,localFileList):
     #REturn register status - success or failure
@@ -25,7 +26,7 @@ def getFileMetadata(fileName):
 
 def registerFile(fileMetaData, peerID):
     # recieves file meta data
-    fileMetaDataList[fileName] = FileMetadata(fileMetaData.fileName, fileMetaData.size)
+    fileMetadataList[fileMetaData.fileName] = FileMetadata(fileMetaData.fileName, fileMetaData.size)
     for chunkInfo in fileMetaData.chunkInfo:
         registerChunk(fileMetaData.fileName,chunkInfo.chunkID, peerID)
     return ReqStatus.SUCCESS
@@ -43,10 +44,23 @@ def processRequest(request):
         #Get file info
         #Chunk register request
     #TODO call the appropriate fn and do marshalling
+    # request = pickl
     out = None
-    serializedOut = pickle.dumps(out) 
-    return serializedOut
+    # serializedOut = pickle.dumps(out) 
+    return out
 
+def socket_target(conn):
+    serializedReq = bytearray()
+    while True: 
+        data = conn.recv(1024) 
+        if not data: 
+            break
+        serializedReq.extend(data)
+    serializedReq = bytes(serializedReq)
+    request = deserialize(serializedReq)
+    reqResponse = processRequest(request)
+    serializedResp = serialize(reqResponse)
+    conn.send(serializedResp)
 
 def initServer():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -55,9 +69,7 @@ def initServer():
     while True:
         client_socket, addr = server_socket.accept()
         print(f"Received req from client: {client_socket}, {addr}")
-        req = server_socket.recv(4096) # send object here?? encoded???
-        reqResponse = processRequest(req)
-        client_socket.send(reqResponse)
+        threading.Thread(target = socket_target, args = client_socket).start
 
 if __name__ == "__main__":
     initServer()

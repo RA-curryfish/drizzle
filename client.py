@@ -5,35 +5,52 @@ from data_structures import *
 SERVER_PORT = 99999
 SERVER_NAME = "localhost"
 
-locFileMetadataList = [] # list of fileMetadata
-globFileMetadataList = [] # list of fileMetadata
+locFileMetadataMap = dict() # dict of fileName to fileMetadata
+globFileMetadataMap = dict() # dict of fileName to fileMetadata
 
+############################
+#Local functionality
+############################
+
+
+def getFileSize(fileName):
+    # TODO implement
+    return 0
+
+def getFile(fileName):
+    #TODO implement
+    pass
+
+def createFileMetadata(fileName, peerIP):
+    fileMetadata = FileMetadata(fileName, getFileSize(fileName), peerIP, getFile(fileName))
+    return fileMetadata
+
+###########################
 # Calls to server API
+###########################
+
 def registerNode(fileList):
     #Send register request to server - pass IP address, and file list
     #Get register status - success or failure
-
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     peerIP = socket.gethostname() #TODO client own IP, check
     #TODO check port to pass
     client_socket.connect((SERVER_NAME,SERVER_PORT))
-    file_data = [
-        locFileMetadataList
-    ]
-    locFileNames = map(lambda x: x.fileName, locFileMetadataList)
-    request = Request("RegisterNode",[peerID, locFileNames]) 
-
+    # file_data = [
+    #     locFileMetadataList
+    # ]
     for fileName in fileList:
-        fileMetadata = FileMetadata(fileName, getFileSize(fileName), peerIP, getFile(fileName))
-        chunkID = 0 
-        for chunk in chunks:
-            registerChunk(file,chunkID,chunk)
-            chunkID += 1
+        fileMetadata = createFileMetadata(fileName, peerIP)
+        locFileMetadataMap[fileName] = fileMetadata
+    request = Request("RegisterNode",(peerIP, locFileMetadataMap))
+    client_socket.sendall(serialize(request))
+    response = deserialize(client_socket.recv(2048))
+    print(f"Response: status - {response.status}, body - {response.body}")
 
 def getFileList():
     #Send get file list request to server
     #Get list of file names
-    request = Request("GetFileList", [])
+    request = Request("GetFileList", tuple())
     #encode request
     #send on socket
     # rcv bytes and populate globalFileList
@@ -49,7 +66,7 @@ def registerChunk(fileName,chunkID):
     #
     # send bytes on socket
     locFileMetadataList[fileName] = FileMetadata(fileName,getFileSize(fileName))
-    locFileMetadataList[fileName].chunkize(file)
+    # locFileMetadataList[fileName].chunkize(file)
     for chunkInfo in locFileMetadataList[fileName].chunkInfo:
         chunk = chunkInfo.chunk
         chunkID = chunkInfo.chunkID
@@ -78,10 +95,3 @@ def downloadFile():
     pass
 
 #Local functionality
-def getFileSize(fileName):
-    # TODO implement
-    return 0
-
-def getFile(fileName):
-    #TODO implement
-    pass

@@ -2,8 +2,13 @@
 from collections import namedtuple
 from enum import Enum
 import hashlib
+import codecs
+import pickle
 
-Request = namedtuple("Request", "reqType args")
+CHUNK_SIZE = 1024
+
+Request = namedtuple("RequestType", "Args")
+Response = namedtuple("Status", "Body")
 
 class ReqStatus(Enum):
     SUCCESS = 0
@@ -12,10 +17,15 @@ class ReqStatus(Enum):
 def getHash(chunk):
     return hashlib.sha1(str.encode()).hexdigest() 
 
+def serialize(obj): #Input object, return bytes
+    return codecs.encode(pickle.dumps(obj), "base64")
+
+def deserialize(serText): #Input bytes, return object
+    return pickle.loads(codecs.decode(serText, "base64"))
 
 # class Request():
 #     def __init__(self,reqType,args):
-#         self.reqType = reqType
+#         self. Type = reqType
 #         self.args = args
 
 # class ChunkPeer():
@@ -40,12 +50,12 @@ class FileMetadata():
     def __init__(self,fileName,size,peerId,file):
         self.fileName = fileName
         self.size = size
-        for i in range(1,10):
-            chunkData = 1 # divide the file somehow 
+        self.chunkInfo = []
+        for i in range(0, size, CHUNK_SIZE): #
+            chunkData = file[i*CHUNK_SIZE:(i+1)*CHUNK_SIZE] # TODO divide the file somehow 
             hashh = getHash(chunkData)
             peers = [peerId]
-            self.chunkInfo[i] = ChunkInfo(chunkData, hashh, peers)
-        #TODO 
+            self.chunkInfo.append(ChunkInfo(chunkData, hashh, peers))
     
     def toDict(self):
         return {
@@ -56,3 +66,5 @@ class FileMetadata():
 
     def addPeer(self,chunkID,peerID):
         self.chunkInfo[chunkID].peers.append(peerID)
+
+def 
