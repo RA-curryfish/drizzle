@@ -15,32 +15,33 @@ def registerNode(peerID,clientfileMetadataMap):
     global fileMetadataMap
     peerList.append(peerID)
     fileMetadataMap.update(clientfileMetadataMap)
-    return ReqStatus.SUCCESS
+    out = Response(ReqStatus.SUCCESS,None)
+    return out
 
 def getFileList():
     global fileList
-    return fileList
+    out = Response(ReqStatus.SUCCESS,fileList)
+    return out
 
 def getFileMetadata(fileName):
     global fileMetadataMap
-    return fileMetadataMap[fileName]
+    out = Response(ReqStatus.SUCCESS,fileMetadataMap[fileName])
+    return out
 
 def registerFile(fileMetaData, peerID):
     global fileMetadataMap
     fileMetadataMap[fileMetaData.fileName] = FileMetadata(fileMetaData.fileName, fileMetaData.size)
     for chunkInfo in fileMetaData.chunkInfo:
         registerChunk(fileMetaData.fileName,chunkInfo.chunkID, peerID)
-    return ReqStatus.SUCCESS
+    return Response(ReqStatus.SUCCESS,None)
     
 def registerChunk(fileName,chunkID,peerID):
     #Return register status
     fileMetadataMap[fileName].addPeer(chunkID,peerID)
-    return ReqStatus.SUCCESS
+    return Response(ReqStatus.SUCCESS,None)
 
 def processRequest(request):
-    #Get request type
-    #Can be either:
-        #Register request, Get file lists, Get file info, Chunk register request
+    #Can be either:Register request, Get file lists, Get file info, Chunk register request
     out = None
 
     if (request.RequestType == RegisterNode):
