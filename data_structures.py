@@ -13,8 +13,8 @@ RegisterChunk = "RegisterChunk"
 
 CHUNK_SIZE = 1024
 
-Request = namedtuple("RequestType", "Args")
-Response = namedtuple("Status", "Body")
+# Request = namedtuple("RequestType", "Args")
+# Response = namedtuple("Status", "Body")
 
 class ReqStatus(Enum):
     SUCCESS = 0
@@ -29,10 +29,15 @@ def serialize(obj): #Input object, return bytes
 def deserialize(serText): #Input bytes, return object
     return pickle.loads(codecs.decode(serText, "base64"))
 
-# class Request():
-#     def __init__(self,reqType,args):
-#         self. Type = reqType
-#         self.args = args
+class Request():
+    def __init__(self,reqType,args):
+        self.RequestType = reqType
+        self.Args = args
+
+class Response():
+    def __init__(self,stat,body):
+        self.Status = stat
+        self.Body = body
 
 # class ChunkPeer():
 #     def __init__(self,chunkID,peerList):
@@ -56,12 +61,12 @@ class FileMetadata():
     def __init__(self,fileName,size,peerId,file):
         self.fileName = fileName
         self.size = size
-        self.chunkInfo = []
-        for i in range(0, size, CHUNK_SIZE): #
-            chunkData = file[i*CHUNK_SIZE:(i+1)*CHUNK_SIZE] # TODO divide the file somehow 
-            hashh = getHash(chunkData)
-            peers = [peerId]
-            self.chunkInfo.append(ChunkInfo(chunkData, hashh, peers))
+        # self.chunkInfo = []
+        # for i in range(0, size, CHUNK_SIZE): #
+        #     chunkData = file[i*CHUNK_SIZE:(i+1)*CHUNK_SIZE] # TODO divide the file somehow 
+        #     hashh = getHash(chunkData)
+        #     peers = [peerId]
+        #     self.chunkInfo.append(ChunkInfo(chunkData, hashh, peers))
     
     def toDict(self):
         return {
@@ -72,5 +77,3 @@ class FileMetadata():
 
     def addPeer(self,chunkID,peerID):
         self.chunkInfo[chunkID].peers.append(peerID)
-
-def 
