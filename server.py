@@ -8,45 +8,57 @@ SERVER_NAME = "localhost"
 
 peerList = [] # list of peers ??? needed???
 fileList = [] # stores file list
-fileMetadataList = dict() #Filename(str) to FileMetadata object
+fileMetadataMap = dict() #Filename(str) to FileMetadata object
 
-def registerNode(peerID,localFileList):
-    #REturn register status - success or failure
+def registerNode(peerID,clientfileMetadataMap):
+    global peerList
+    global fileMetadataMap
     peerList.append(peerID)
-    fileList.append(localFileList)
+    fileMetadataMap.update(clientfileMetadataMap)
     return ReqStatus.SUCCESS
 
 def getFileList():
-    #REturn list of file names
+    global fileList
     return fileList
 
 def getFileMetadata(fileName):
-    #REturn the hosts and chunk info for each node where the file is present
-    return fileMetadataList[fileName]
+    global fileMetadataMap
+    return fileMetadataMap[fileName]
 
 def registerFile(fileMetaData, peerID):
-    # recieves file meta data
-    fileMetadataList[fileMetaData.fileName] = FileMetadata(fileMetaData.fileName, fileMetaData.size)
+    global fileMetadataMap
+    fileMetadataMap[fileMetaData.fileName] = FileMetadata(fileMetaData.fileName, fileMetaData.size)
     for chunkInfo in fileMetaData.chunkInfo:
         registerChunk(fileMetaData.fileName,chunkInfo.chunkID, peerID)
     return ReqStatus.SUCCESS
     
 def registerChunk(fileName,chunkID,peerID):
     #Return register status
-    fileMetadataList[fileName].addPeer(chunkID,peerID)
+    fileMetadataMap[fileName].addPeer(chunkID,peerID)
     return ReqStatus.SUCCESS
 
 def processRequest(request):
     #Get request type
     #Can be either:
-        #Register request
-        #Get file lists
-        #Get file info
-        #Chunk register request
-    #TODO call the appropriate fn and do marshalling
-    # request = pickl
+        #Register request, Get file lists, Get file info, Chunk register request
     out = None
-    # serializedOut = pickle.dumps(out) 
+
+    if (request.RequestType == RegisterNode):
+        peerIP = request.Args[0]
+        clientFileMetaDataMap = request.Args[1]
+        assert( (peerIP is not None) and (clientFileMetaDataMap is not None))
+        out = RegisterNode(peerIP,clientFileMetaDataMap)
+    elif (request.RequestType == GetFileList):
+        out = GetFileList()
+    elif (request.RequestType == GetFileMetadata):
+        fileName = request.Args[0]
+        assert(fileName is not None)
+        out = GetFileMetadata(fileName)
+    elif (request.RequestType == RegisterChunk):
+        fileName = request.Args[0]
+        chunkID = request.Args[1]
+        chunk = request.Args[2]
+        out = RegisterChunk(fileName, chunkID, chunk)
     return out
 
 def socket_target(conn):

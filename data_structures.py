@@ -5,6 +5,12 @@ import hashlib
 import codecs
 import pickle
 
+# Request type values
+RegisterNode = "RegisterNode"
+GetFileList = "GetFileList"
+GetFileMetadata = "GetFileMetadata"
+RegisterChunk = "RegisterChunk"
+
 CHUNK_SIZE = 1024
 
 Request = namedtuple("RequestType", "Args")
