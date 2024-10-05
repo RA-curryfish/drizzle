@@ -58,15 +58,15 @@ class ChunkInfo():
         }
 
 class FileMetadata():
-    def __init__(self,fileName,size,peerId,file):
+    def __init__(self,fileName,size,peerId,peerPort,file):
         self.fileName = fileName
         self.size = size
-        # self.chunkInfo = []
-        # for i in range(0, size, CHUNK_SIZE): #
-        #     chunkData = file[i*CHUNK_SIZE:(i+1)*CHUNK_SIZE] # TODO divide the file somehow 
-        #     hashh = getHash(chunkData)
-        #     peers = [peerId]
-        #     self.chunkInfo.append(ChunkInfo(chunkData, hashh, peers))
+        self.chunkInfo = []
+        for i in range(0, size, CHUNK_SIZE): #
+            chunkData = file[i*CHUNK_SIZE:(i+1)*CHUNK_SIZE] # TODO divide the file somehow 
+            hashh = getHash(chunkData)
+            peers = [(peerId, peerPort)]
+            self.chunkInfo.append(ChunkInfo(chunkData, hashh, peers))
     
     def toDict(self):
         return {
