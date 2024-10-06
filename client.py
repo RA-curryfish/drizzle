@@ -144,7 +144,7 @@ def uploadChunk(request):
         start = chunkID*CHUNK_SIZE
         f.seek(start)
         chunk = f.read(CHUNK_SIZE)
-        return chunk
+    return chunk
 
 def socket_target(conn):
     serializedReq = bytearray()
