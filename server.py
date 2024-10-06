@@ -45,12 +45,13 @@ def registerChunk(fileName,chunkID,peerID):
 def processRequest(request):
     #Can be either:Register request, Get file lists, Get file info, Chunk register request
     out = None
-
     if (request.RequestType == RegisterNode):
         peerIP = request.Args[0]
         clientFileMetaDataMap = request.Args[1]
         assert( (peerIP is not None) and (clientFileMetaDataMap is not None))
         out = registerNode(peerIP,clientFileMetaDataMap)
+        print(f"Registerd {peerIP}")
+        print(f"Metadata {fileMetadataMap['abd']}")
     elif (request.RequestType == GetFileList):
         out = getFileList()
     elif (request.RequestType == GetFileMetadata):
@@ -106,7 +107,8 @@ def initServer():
 
         client_socket, addr = server_socket.accept()
         print(f"Received req from client: {client_socket}, {addr}")
-        threading.Thread(target = socket_target, args = client_socket).start
+        threading.Thread(target = socket_target, args = [client_socket]).start()
+        print("asdasdsadasdd")
     print("does not reach")
 
 if __name__ == "__main__":

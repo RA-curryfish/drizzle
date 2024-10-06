@@ -1,6 +1,7 @@
 import socket
 from data_structures import *
 import threading
+import os
 
 SERVER_PORT = 9999
 SERVER_NAME = "localhost"
@@ -61,16 +62,16 @@ def registerNode(fileList):
     #Send register request to server - pass IP address, and file list
     #Get register status - success or failure
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    peerIP = socket.gethostname() #TODO client own IP, check
-    #TODO check port to pass
+    peerIP = CLIENT_IP #TODO client own IP, check
     client_socket.connect((SERVER_NAME,SERVER_PORT))
     for fileName in fileList:
         fileMetadata = createFileMetadata(fileName)
         locFileMetadataMap[fileName] = fileMetadata
     request = Request(RegisterNode,(peerIP, locFileMetadataMap))
     client_socket.sendall(serialize(request))
+    client_socket.shutdown(socket.SHUT_WR)
     response = deserialize(client_socket.recv(2048))
-    print(f"Response: status - {response.status}, body - {response.body}")
+    print(f"Response: status - {response.Status}, body - {response.Body}")
     client_socket.shutdown(socket.SHUT_RDWR)
 
 def getFileList():
@@ -81,7 +82,7 @@ def getFileList():
     # rcv bytes and populate globalFileList
     request = Request(GetFileList, tuple())
     response = sendReqToServer(request)
-    print(f"Response: status - {response.status}, body - {response.body}")
+    print(f"Response: status - {response.Status}, body - {response.Body}")
     global globFileList
     if response is not None:
         globFileList = response
@@ -91,7 +92,7 @@ def getFileMetadata(fileName):
     #Get the hosts and chunk info for each node where the file is present
     request = Request(GetFileMetadata, (fileName,))
     response = sendReqToServer(request)
-    print(f"Response: status - {response.status}, body - {response.body}")
+    print(f"Response: status - {response.Status}, body - {response.Body}")
     global globFileMetadata
     if response is not None:
         globFileMetadata[fileName] = response
@@ -102,7 +103,7 @@ def registerChunk(fileName,chunkID):
     # send bytes on socket
     request = Request(RegisterChunk, (fileName, chunkID, CLIENT_IP))
     response = sendReqToServer(request)
-    print(f"Response: status - {response.status}, body - {response.body}")
+    print(f"Response: status - {response.Status}, body - {response.Body}")
 
 def downloadChunk(fileName,chunkID, srcIP, srcPort):
     #send
@@ -170,4 +171,10 @@ def initClient():
 
 
 if __name__ == "__main__":
-    initClient()
+    threading.Thread(target=initClient,args=None).start
+    # initClient()
+    fileList = []
+    for file in os.listdir("files"):
+        fileList.append(file)
+    print(fileList)
+    registerNode(fileList)

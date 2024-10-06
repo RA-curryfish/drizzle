@@ -72,8 +72,9 @@ class FileMetadata():
         return {
             "fileName": self.fileName,
             "size": self.size,
-            "chunkInfo": [chunk.toDict() for chunk in self.ChunkInfo]
+            "chunkInfo": [chunk.toDict() for chunk in self.chunkInfo]
         }
-
+    def __str__(self):
+        return str(self.toDict())
     def addPeer(self,chunkID,peerID):
         self.chunkInfo[chunkID].peers.append(peerID)
