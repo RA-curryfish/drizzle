@@ -11,6 +11,9 @@ GetFileList = "GetFileList"
 GetFileMetadata = "GetFileMetadata"
 RegisterChunk = "RegisterChunk"
 
+SERVER_PORT = 55555
+SERVER_NAME = "130.203.16.40"
+
 CHUNK_SIZE = 20
 
 class ReqStatus(Enum):

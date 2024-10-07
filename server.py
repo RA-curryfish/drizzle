@@ -3,9 +3,6 @@ import threading
 
 from data_structures import *
 
-SERVER_PORT = 9999
-SERVER_NAME = "localhost"
-
 peerList = [] # list of peers ??? needed???
 fileList = [] # stores file list
 fileMetadataMap = dict() #Filename(str) to FileMetadata object

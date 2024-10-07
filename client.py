@@ -4,8 +4,8 @@ import threading
 import os
 import sys
 
-SERVER_PORT = 9999
-SERVER_NAME = "localhost"
+SERVER_PORT = 55555
+SERVER_NAME = "130.203.16.40"
 CLIENT_IP = socket.gethostbyname(socket.gethostname())
 CLIENT_PORT = None
 FILES_DIR = ""
@@ -29,6 +29,7 @@ def createFileMetadata(fileName):
 
 def sendReqToServer(request):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print(f"Connecting to server: {SERVER_NAME, SERVER_PORT}")
     client_socket.connect((SERVER_NAME,SERVER_PORT))
     client_socket.sendall(serialize(request))
     client_socket.shutdown(socket.SHUT_WR)
@@ -184,7 +185,7 @@ def initClient():
 if __name__ == "__main__":
     threading.Thread(target=initClient,args=[]).start()
     FILES_DIR = sys.argv[1]
-    CLIENT_PORT = sys.argv[2]
+    CLIENT_PORT = int(sys.argv[2])
     fileList = []
     for file in os.listdir(FILES_DIR):
         fileList.append(file)
