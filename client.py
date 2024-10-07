@@ -7,7 +7,7 @@ import sys
 SERVER_PORT = 9999
 SERVER_NAME = "localhost"
 CLIENT_IP = socket.gethostbyname(socket.gethostname())
-CLIENT_PORT = 4321
+CLIENT_PORT = None
 FILES_DIR = ""
 
 locFileMetadataMap = dict() # dict of fileName to fileMetadata
@@ -32,8 +32,14 @@ def sendReqToServer(request):
     client_socket.connect((SERVER_NAME,SERVER_PORT))
     client_socket.sendall(serialize(request))
     client_socket.shutdown(socket.SHUT_WR)
-    response = deserialize(client_socket.recv(2048))
-    client_socket.shutdown(socket.SHUT_RDWR)
+    response = bytearray()
+    while True:
+        data = client_socket.recv(2048)
+        if not data:
+            break
+        response.extend(data)
+    response = deserialize(response)
+    # client_socket.shutdown(socket.SHUT_RD)
     return response
 
 def sendReqToClient(request, clientIP, clientPort):
@@ -54,7 +60,7 @@ def rarestPeers(chunkInfo):
     chunkList = list(enumerate(chunkInfo))
     chunkList.sort(key = lambda x:len(x[1].peers) )
     for chunkId, chunk in chunkList:
-        chunkToPeer.append((chunkID,chunk.peers[0]))
+        chunkToPeer.append((chunkId,chunk.peers[0]))
     
     return chunkToPeer
 
@@ -128,15 +134,15 @@ def downloadFile(fileName):
     dloadThreads = []
     for chunkId, peer in chunkToPeer:
         peerIP, peerPort = peer
-        dloadThreads.append(threading.Thread(target=downloadChunk, args=[fileName,chunkId,peerIP,peerPort]))
+        dloadThreads.append(threading.Thread(target=downloadChunk, args=[fileName,chunkId,peerIP,peerPort,file_data]))
         print(f"Downloading chunk {chunkId} from {peer}")
         dloadThreads[-1].start()
         # file_data[chunkId] = downloadChunk(fileName, chunkId, peerIP, peerPort)
     print(f"Downloaded file {fileName}, contents: {file_data}")
     for t in dloadThreads:
         t.join()
-    with open(fileName, 'wb') as f:
-        f.write(''.join(file_data))
+    with open(FILES_DIR+"/"+fileName, 'wb') as f:
+        f.write(b''.join(file_data))
 
 ##########################################
 ##############  UPLOAD PART  #############
@@ -168,6 +174,7 @@ def initClient():
     upload_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     upload_socket.bind((CLIENT_IP,CLIENT_PORT))
     upload_socket.listen(10) #Max 10 peers in the queue
+    print("sdfsdfdsffdgdgdgdfg")
     while True:
         client_socket, addr = upload_socket.accept()
         print(f"Received download req from client: {client_socket}, {addr}")
@@ -175,8 +182,9 @@ def initClient():
 
 
 if __name__ == "__main__":
-    threading.Thread(target=initClient,args=None).start
+    threading.Thread(target=initClient,args=[]).start()
     FILES_DIR = sys.argv[1]
+    CLIENT_PORT = sys.argv[2]
     fileList = []
     for file in os.listdir(FILES_DIR):
         fileList.append(file)
@@ -185,5 +193,6 @@ if __name__ == "__main__":
     getFileList()
     print(f"Files after rq: {globFileList}")
     print(f"File Metadata before: {globFileMetadata}")
-    getFileMetadata(globFileList[0])
-    print(f"File Metadata after: {len(locFileMetadataMap['abd'].chunkInfo)}")
+    getFileMetadata('kdjfs')
+    # print(f"File Metadata after: {len(locFileMetadataMap['abd'].chunkInfo)}")
+    downloadFile('kdjfs')

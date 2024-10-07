@@ -17,6 +17,7 @@ def registerNode(peerID,clientfileMetadataMap):
     peerList.append(peerID)
     fileList.extend(clientfileMetadataMap.keys())
     fileMetadataMap.update(clientfileMetadataMap)
+    # print(clientfileMetadataMap)
     out = Response(ReqStatus.SUCCESS,None)
     return out
 
@@ -27,15 +28,16 @@ def getFileList():
 
 def getFileMetadata(fileName):
     global fileMetadataMap
+    print(fileMetadataMap[fileName])
     out = Response(ReqStatus.SUCCESS,fileMetadataMap[fileName])
     return out
 
-def registerFile(fileMetaData, peerID):
-    global fileMetadataMap
-    fileMetadataMap[fileMetaData.fileName] = FileMetadata(fileMetaData.fileName, fileMetaData.size)
-    for chunkInfo in fileMetaData.chunkInfo:
-        registerChunk(fileMetaData.fileName,chunkInfo.chunkID, peerID)
-    return Response(ReqStatus.SUCCESS,None)
+# def registerFile(fileMetaData, peerID):
+#     global fileMetadataMap
+#     fileMetadataMap[fileMetaData.fileName] = FileMetadata(fileMetaData.fileName, fileMetaData.size)
+#     for chunkInfo in fileMetaData.chunkInfo:
+#         registerChunk(fileMetaData.fileName,chunkInfo.chunkID, peerID)
+#     return Response(ReqStatus.SUCCESS,None)
     
 def registerChunk(fileName,chunkID,peerID):
     #Return register status
@@ -91,8 +93,10 @@ def socket_target(conn):
     serializedReq = bytes(serializedReq)
     request = deserialize(serializedReq)
     reqResponse = processRequest(request)
+    # print(f"Res[pmse] {reqResponse}")
     serializedResp = serialize(reqResponse)
     conn.send(serializedResp)
+    conn.shutdown(socket.SHUT_WR)
 
 def initServer():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
