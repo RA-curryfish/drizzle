@@ -2,11 +2,13 @@ import socket
 from data_structures import *
 import threading
 import os
+import sys
 
 SERVER_PORT = 9999
 SERVER_NAME = "localhost"
-CLIENT_IP = "localhost"
+CLIENT_IP = socket.gethostbyname(socket.gethostname())
 CLIENT_PORT = 4321
+FILES_DIR = ""
 
 locFileMetadataMap = dict() # dict of fileName to fileMetadata
 globFileList = list() 
@@ -15,22 +17,21 @@ globFileMetadata = dict() # dict of fileName to fileMetadata
 ############################
 #Local functionality
 ############################
-def getFileSize(fileName):
-    # TODO implement
-    return 0
+def getFilePath(fileName):
+    return FILES_DIR+"/"+fileName
 
-def getFile(fileName):
-    #TODO implement
-    pass
+def getFileSize(fileName):
+    return os.path.getsize(getFilePath(fileName))
 
 def createFileMetadata(fileName):
-    fileMetadata = FileMetadata(fileName, getFileSize(fileName), CLIENT_IP, CLIENT_PORT, getFile(fileName))
+    fileMetadata = FileMetadata(fileName, getFileSize(fileName), CLIENT_IP, CLIENT_PORT, getFilePath(fileName))
     return fileMetadata
 
 def sendReqToServer(request):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((SERVER_NAME,SERVER_PORT))
     client_socket.sendall(serialize(request))
+    client_socket.shutdown(socket.SHUT_WR)
     response = deserialize(client_socket.recv(2048))
     client_socket.shutdown(socket.SHUT_RDWR)
     return response
@@ -49,9 +50,12 @@ def modifyChunk(fileName,chunkID):
 
 def rarestPeers(chunkInfo):
     #return map of chunk ID to (peerIP, peerPort)
-    chunkToPeer = dict()
-    for chunkId, chunk in enumerate(chunkInfo):
-        chunkToPeer[chunkId] = chunkInfo.peers[0]
+    chunkToPeer = []
+    chunkList = list(enumerate(chunkInfo))
+    chunkList.sort(key = lambda x:len(x[1].peers) )
+    for chunkId, chunk in chunkList:
+        chunkToPeer.append((chunkID,chunk.peers[0]))
+    
     return chunkToPeer
 
 ###########################
@@ -61,18 +65,13 @@ def rarestPeers(chunkInfo):
 def registerNode(fileList):
     #Send register request to server - pass IP address, and file list
     #Get register status - success or failure
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    peerIP = CLIENT_IP #TODO client own IP, check
-    client_socket.connect((SERVER_NAME,SERVER_PORT))
+    peerIP = CLIENT_IP
     for fileName in fileList:
         fileMetadata = createFileMetadata(fileName)
         locFileMetadataMap[fileName] = fileMetadata
     request = Request(RegisterNode,(peerIP, locFileMetadataMap))
-    client_socket.sendall(serialize(request))
-    client_socket.shutdown(socket.SHUT_WR)
-    response = deserialize(client_socket.recv(2048))
+    response = sendReqToServer(request)
     print(f"Response: status - {response.Status}, body - {response.Body}")
-    client_socket.shutdown(socket.SHUT_RDWR)
 
 def getFileList():
     #Send get file list request to server
@@ -85,7 +84,7 @@ def getFileList():
     print(f"Response: status - {response.Status}, body - {response.Body}")
     global globFileList
     if response is not None:
-        globFileList = response
+        globFileList = response.Body
     #Overwriting the local list
 
 def getFileMetadata(fileName):
@@ -95,7 +94,8 @@ def getFileMetadata(fileName):
     print(f"Response: status - {response.Status}, body - {response.Body}")
     global globFileMetadata
     if response is not None:
-        globFileMetadata[fileName] = response
+        globFileMetadata[fileName] = response.Body
+        # FileMetadata.getObjFromResponse(response.Body['filename'],response.Body['size'],response.Body['chunkInfo'])
 
 def registerChunk(fileName,chunkID):
     #Send filename and chunk ID
@@ -105,7 +105,7 @@ def registerChunk(fileName,chunkID):
     response = sendReqToServer(request)
     print(f"Response: status - {response.Status}, body - {response.Body}")
 
-def downloadChunk(fileName,chunkID, srcIP, srcPort):
+def downloadChunk(fileName,chunkID, srcIP, srcPort,file_data):
     #send
     downloadRequest = Request("DownloadChunk", (fileName, chunkID))
     response = sendReqToClient(downloadRequest, srcIP, srcPort)
@@ -114,10 +114,10 @@ def downloadChunk(fileName,chunkID, srcIP, srcPort):
         registerRequest = Request("RegisterChunk", (fileName, chunkID))
         registerResponse = sendReqToServer(registerRequest)
         print(f"Register chunk Response: status - {registerResponse.status}, body - {registerResponse.body}")
+        file_data[chunkID] = response.Body
 
 def downloadFile(fileName):
     #get list of chunks from server
-    #TODO use rarest first to determine order of chunks
     #TODO use multi-threading to download chunks parallely
     #once chunk is received, verify the chunk 
     getFileMetadata(fileName)
@@ -125,10 +125,16 @@ def downloadFile(fileName):
     num_chunks = len(fileMetadata.chunkInfo)
     file_data = [None]*num_chunks
     chunkToPeer = rarestPeers(fileMetadata.chunkInfo)
-    for chunkId, peer in chunkToPeer.items():
+    dloadThreads = []
+    for chunkId, peer in chunkToPeer:
         peerIP, peerPort = peer
-        file_data[chunkId] = downloadChunk(fileName, chunkId, peerIP, peerPort)    
+        dloadThreads.append(threading.Thread(target=downloadChunk, args=[fileName,chunkId,peerIP,peerPort]))
+        print(f"Downloading chunk {chunkId} from {peer}")
+        dloadThreads[-1].start()
+        # file_data[chunkId] = downloadChunk(fileName, chunkId, peerIP, peerPort)
     print(f"Downloaded file {fileName}, contents: {file_data}")
+    for t in dloadThreads:
+        t.join()
     with open(fileName, 'wb') as f:
         f.write(''.join(file_data))
 
@@ -137,9 +143,7 @@ def downloadFile(fileName):
 ##########################################
         
 def uploadChunk(request):
-    #send
     fileName,chunkID = request.Args
-    #TODO read chunk from file and send
     with open(fileName, 'rb') as f:
         start = chunkID*CHUNK_SIZE
         f.seek(start)
@@ -172,9 +176,14 @@ def initClient():
 
 if __name__ == "__main__":
     threading.Thread(target=initClient,args=None).start
-    # initClient()
+    FILES_DIR = sys.argv[1]
     fileList = []
-    for file in os.listdir("files"):
+    for file in os.listdir(FILES_DIR):
         fileList.append(file)
-    print(fileList)
+    print(f"Files before request: {globFileList}")
     registerNode(fileList)
+    getFileList()
+    print(f"Files after rq: {globFileList}")
+    print(f"File Metadata before: {globFileMetadata}")
+    getFileMetadata(globFileList[0])
+    print(f"File Metadata after: {len(locFileMetadataMap['abd'].chunkInfo)}")
