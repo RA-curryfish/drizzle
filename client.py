@@ -1,5 +1,5 @@
 import socket
-from data_structures import *
+from utils import *
 import threading
 import os
 import sys
@@ -27,7 +27,7 @@ def createFileMetadata(fileName):
 
 def sendReqToServer(request):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    print(f"Connecting to server: {SERVER_NAME, SERVER_PORT}")
+    logging.debug(f"Connecting to server: {SERVER_NAME, SERVER_PORT}")
     client_socket.connect((SERVER_NAME,SERVER_PORT))
     client_socket.sendall(serialize(request))
     client_socket.shutdown(socket.SHUT_WR)
@@ -43,7 +43,7 @@ def sendReqToServer(request):
 
 def sendReqToClient(request, clientIP, clientPort):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    print(f"Connecting to peer: {clientIP, clientPort}")
+    logging.debug(f"Connecting to peer: {clientIP, clientPort}")
     client_socket.connect((clientIP, clientPort))
     client_socket.sendall(serialize(request))
     client_socket.shutdown(socket.SHUT_WR)
@@ -83,7 +83,7 @@ def registerNode(fileList):
         locFileMetadataMap[fileName] = fileMetadata
     request = Request(RegisterNode,(peerIP, locFileMetadataMap))
     response = sendReqToServer(request)
-    print(f"Response: status - {response.Status}, body - {response.Body}")
+    logging.debug(f"Response: status - {response.Status}, body - {response.Body}")
 
 def getFileList():
     #Send get file list request to server
@@ -93,7 +93,7 @@ def getFileList():
     # rcv bytes and populate globalFileList
     request = Request(GetFileList, tuple())
     response = sendReqToServer(request)
-    print(f"Response: status - {response.Status}, body - {response.Body}")
+    logging.debug(f"Response: status - {response.Status}, body - {response.Body}")
     global globFileList
     if response is not None:
         globFileList = response.Body
@@ -103,7 +103,7 @@ def getFileMetadata(fileName):
     #Get the hosts and chunk info for each node where the file is present
     request = Request(GetFileMetadata, (fileName,))
     response = sendReqToServer(request)
-    print(f"Response: status - {response.Status}, body - {response.Body}")
+    logging.debug(f"Response: status - {response.Status}, body - {response.Body}")
     global globFileMetadata
     if response is not None:
         globFileMetadata[fileName] = response.Body
@@ -114,17 +114,17 @@ def registerChunk(fileName,chunkID):
     # send bytes on socket
     request = Request(RegisterChunk, (fileName, chunkID, CLIENT_IP, CLIENT_PORT))
     response = sendReqToServer(request)
-    # print(f"Response: status - {response.Status}, body - {response.Body}")
+    # logging.debug(f"Response: status - {response.Status}, body - {response.Body}")
     return response
 
 def downloadChunk(fileName,chunkID, srcIP, srcPort,file_data):
     #send
     downloadRequest = Request("DownloadChunk", (fileName, chunkID))
     response = sendReqToClient(downloadRequest, srcIP, srcPort)
-    print(f"Download chunk Response: status - {response.Status}, body - {response.Body}")
+    logging.debug(f"Download chunk Response: status - {response.Status}, body - {response.Body}")
     if response is not None:
         registerResponse = registerChunk(fileName,chunkID)
-        print(f"Register chunk Response: status - {registerResponse.Status}, body - {registerResponse.Body}")
+        logging.debug(f"Register chunk Response: status - {registerResponse.Status}, body - {registerResponse.Body}")
         file_data[chunkID] = response.Body
 
 def downloadFile(fileName):
@@ -140,12 +140,12 @@ def downloadFile(fileName):
     for chunkId, peer in chunkToPeer:
         peerIP, peerPort = peer
         dloadThreads.append(threading.Thread(target=downloadChunk, args=[fileName,chunkId,peerIP,peerPort,file_data]))
-        print(f"Downloading chunk {chunkId} from {peer}")
+        logging.debug(f"Downloading chunk {chunkId} from {peer}")
         dloadThreads[-1].start()
         # file_data[chunkId] = downloadChunk(fileName, chunkId, peerIP, peerPort)
     for t in dloadThreads:
         t.join()
-    print(f"Downloaded file {fileName}, contents: {file_data}")
+    logging.debug(f"Downloaded file {fileName}, contents: {file_data}")
     with open(getFilePath(fileName), 'wb') as f:
         f.write(b''.join(file_data))
 
@@ -170,7 +170,7 @@ def socket_target(conn):
         serializedReq.extend(data)
     serializedReq = bytes(serializedReq)
     request = deserialize(serializedReq)
-    print(f"REceived upload req")
+    logging.debug(f"REceived upload req")
     reqResponse = uploadChunk(request)
     serializedResp = serialize(reqResponse)
     conn.send(serializedResp)
@@ -181,10 +181,10 @@ def initClient():
     upload_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     upload_socket.bind((CLIENT_IP,CLIENT_PORT))
     upload_socket.listen(10) #Max 10 peers in the queue
-    print("sdfsdfdsffdgdgdgdfg")
+    logging.debug("sdfsdfdsffdgdgdgdfg")
     while True:
         client_socket, addr = upload_socket.accept()
-        print(f"Received download req from client: {client_socket}, {addr}")
+        logging.debug(f"Received download req from client: {client_socket}, {addr}")
         threading.Thread(target = socket_target, args = [client_socket]).start()
 
 
@@ -195,13 +195,13 @@ if __name__ == "__main__":
     fileList = []
     for file in os.listdir(FILES_DIR):
         fileList.append(file)
-    print(f"Files before request: {globFileList}")
+    logging.debug(f"Files before request: {globFileList}")
     registerNode(fileList)
     getFileList()
-    print(f"Files after rq: {globFileList}")
-    print(f"File Metadata before: {globFileMetadata}")
+    logging.debug(f"Files after rq: {globFileList}")
+    logging.debug(f"File Metadata before: {globFileMetadata}")
     getFileMetadata('xyz')
-    # print(f"File Metadata after: {len(locFileMetadataMap['abd'].chunkInfo)}")
+    # logging.debug(f"File Metadata after: {len(locFileMetadataMap['abd'].chunkInfo)}")
     if 'abd' not in fileList:
         downloadFile('abd')
         getFileMetadata('abd')

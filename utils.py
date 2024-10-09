@@ -5,7 +5,10 @@ import hashlib
 import codecs
 import pickle
 import logging
+import sys
 
+logging.basicConfig(level=logging.DEBUG)
+# logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 # Request type values
 RegisterNode = "RegisterNode"
 GetFileList = "GetFileList"

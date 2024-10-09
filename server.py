@@ -1,6 +1,6 @@
 import socket
 import threading
-from data_structures import *
+from utils import *
 
 peerList = set() # list of peers ??? needed???
 fileList = set() # stores file list
