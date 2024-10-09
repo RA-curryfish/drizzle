@@ -4,8 +4,6 @@ import threading
 import os
 import sys
 
-SERVER_PORT = 55555
-SERVER_NAME = "130.203.16.40"
 CLIENT_IP = socket.gethostbyname(socket.gethostname())
 CLIENT_PORT = None
 FILES_DIR = ""
@@ -45,10 +43,17 @@ def sendReqToServer(request):
 
 def sendReqToClient(request, clientIP, clientPort):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print(f"Connecting to peer: {clientIP, clientPort}")
     client_socket.connect((clientIP, clientPort))
     client_socket.sendall(serialize(request))
-    response = deserialize(client_socket.recv(2048))
-    client_socket.shutdown(socket.SHUT_RDWR)
+    client_socket.shutdown(socket.SHUT_WR)
+    response = bytearray()
+    while True:
+        data = client_socket.recv(2048)
+        if not data:
+            break
+        response.extend(data)
+    response = deserialize(response)
     return response
 
 def modifyChunk(fileName,chunkID):
@@ -106,21 +111,20 @@ def getFileMetadata(fileName):
 
 def registerChunk(fileName,chunkID):
     #Send filename and chunk ID
-    #
     # send bytes on socket
-    request = Request(RegisterChunk, (fileName, chunkID, CLIENT_IP))
+    request = Request(RegisterChunk, (fileName, chunkID, CLIENT_IP, CLIENT_PORT))
     response = sendReqToServer(request)
-    print(f"Response: status - {response.Status}, body - {response.Body}")
+    # print(f"Response: status - {response.Status}, body - {response.Body}")
+    return response
 
 def downloadChunk(fileName,chunkID, srcIP, srcPort,file_data):
     #send
     downloadRequest = Request("DownloadChunk", (fileName, chunkID))
     response = sendReqToClient(downloadRequest, srcIP, srcPort)
-    print(f"Download chunk Response: status - {response.status}, body - {response.body}")
+    print(f"Download chunk Response: status - {response.Status}, body - {response.Body}")
     if response is not None:
-        registerRequest = Request("RegisterChunk", (fileName, chunkID))
-        registerResponse = sendReqToServer(registerRequest)
-        print(f"Register chunk Response: status - {registerResponse.status}, body - {registerResponse.body}")
+        registerResponse = registerChunk(fileName,chunkID)
+        print(f"Register chunk Response: status - {registerResponse.Status}, body - {registerResponse.Body}")
         file_data[chunkID] = response.Body
 
 def downloadFile(fileName):
@@ -139,10 +143,10 @@ def downloadFile(fileName):
         print(f"Downloading chunk {chunkId} from {peer}")
         dloadThreads[-1].start()
         # file_data[chunkId] = downloadChunk(fileName, chunkId, peerIP, peerPort)
-    print(f"Downloaded file {fileName}, contents: {file_data}")
     for t in dloadThreads:
         t.join()
-    with open(FILES_DIR+"/"+fileName, 'wb') as f:
+    print(f"Downloaded file {fileName}, contents: {file_data}")
+    with open(getFilePath(fileName), 'wb') as f:
         f.write(b''.join(file_data))
 
 ##########################################
@@ -151,11 +155,11 @@ def downloadFile(fileName):
         
 def uploadChunk(request):
     fileName,chunkID = request.Args
-    with open(fileName, 'rb') as f:
+    with open(getFilePath(fileName), 'rb') as f:
         start = chunkID*CHUNK_SIZE
         f.seek(start)
         chunk = f.read(CHUNK_SIZE)
-    return chunk
+    return Response(ReqStatus.SUCCESS, chunk)
 
 def socket_target(conn):
     serializedReq = bytearray()
@@ -166,9 +170,11 @@ def socket_target(conn):
         serializedReq.extend(data)
     serializedReq = bytes(serializedReq)
     request = deserialize(serializedReq)
+    print(f"REceived upload req")
     reqResponse = uploadChunk(request)
     serializedResp = serialize(reqResponse)
     conn.send(serializedResp)
+    conn.shutdown(socket.SHUT_WR)
 
 
 def initClient():
@@ -179,7 +185,7 @@ def initClient():
     while True:
         client_socket, addr = upload_socket.accept()
         print(f"Received download req from client: {client_socket}, {addr}")
-        threading.Thread(target = socket_target, args = client_socket).start
+        threading.Thread(target = socket_target, args = [client_socket]).start()
 
 
 if __name__ == "__main__":
@@ -194,6 +200,8 @@ if __name__ == "__main__":
     getFileList()
     print(f"Files after rq: {globFileList}")
     print(f"File Metadata before: {globFileMetadata}")
-    getFileMetadata('kdjfs')
+    getFileMetadata('xyz')
     # print(f"File Metadata after: {len(locFileMetadataMap['abd'].chunkInfo)}")
-    downloadFile('kdjfs')
+    if 'abd' not in fileList:
+        downloadFile('abd')
+        getFileMetadata('abd')
