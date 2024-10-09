@@ -156,8 +156,9 @@ def downloadFile(fileName):
             logging.debug(f"Downloading chunk {chunkId} from {peer}")
             dloadThreads[-1].start()
             # file_data[chunkId] = downloadChunk(fileName, chunkId, peerIP, peerPort)
-        for t in dloadThreads:
+        for i,t in enumerate(dloadThreads):
             t.join()
+            printProgressBar(i+1,num_chunks,fileName)
         logging.debug(f"Downloaded file {fileName}, contents: {file_data}")
         with open(getFilePath(fileName), 'wb') as f:
             f.write(b''.join(file_data))

@@ -33,6 +33,13 @@ def serialize(obj): #Input object, return bytes
 def deserialize(serText): #Input bytes, return object
     return pickle.loads(codecs.decode(serText, "base64"))
 
+def printProgressBar(index, total, label):
+    n_bar = 50  # Progress bar width
+    progress = index / total
+    sys.stdout.write('\r')
+    sys.stdout.write(f"[{'=' * int(n_bar * progress):{n_bar}s}] {int(100 * progress)}%  {label}")
+    sys.stdout.flush()
+
 class Request():
     def __init__(self,reqType,args):
         self.RequestType = reqType
