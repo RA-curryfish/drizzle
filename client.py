@@ -205,6 +205,7 @@ def socket_target(conn):
 def initClient():
     upload_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     upload_socket.bind((CLIENT_IP,CLIENT_PORT))
+    logging.info(f"Started peer, uploading on {(CLIENT_IP,CLIENT_PORT)}")
     upload_socket.listen(10) #Max 10 peers in the queue
     while True:
         client_socket, addr = upload_socket.accept()

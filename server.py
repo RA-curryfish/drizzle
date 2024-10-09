@@ -97,7 +97,7 @@ def initServer():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((SERVER_NAME,SERVER_PORT))
     server_socket.listen(10) #Max 10 peers in the queue
-    logging.debug(f"SERVER ON {SERVER_NAME}:{SERVER_PORT}")
+    logging.info(f"Server started on {SERVER_NAME}:{SERVER_PORT}")
     ## TESTING ONLY
     # socket_target(None)
     ## TESTING END
