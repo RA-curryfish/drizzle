@@ -9,7 +9,7 @@ CLIENT_PORT = None
 FILES_DIR = ""
 
 locFileMetadataMap = dict() # dict of fileName to fileMetadata
-globFileList = list() 
+globFileList = list() # list of all files in server
 globFileMetadata = dict() # dict of fileName to fileMetadata
 
 ############################
@@ -108,6 +108,9 @@ def getFileMetadata(fileName):
     if response is not None:
         globFileMetadata[fileName] = response.Body
         # FileMetadata.getObjFromResponse(response.Body['filename'],response.Body['size'],response.Body['chunkInfo'])
+    else:
+        logging.error("File {fileName} not present in server")
+        raise Exception()
 
 def registerChunk(fileName,chunkID):
     #Send filename and chunk ID
@@ -117,37 +120,50 @@ def registerChunk(fileName,chunkID):
     # logging.debug(f"Response: status - {response.Status}, body - {response.Body}")
     return response
 
-def downloadChunk(fileName,chunkID, srcIP, srcPort,file_data):
+def downloadChunk(fileName,chunkID, srcIP, srcPort, hashValue, file_data):
     #send
     downloadRequest = Request("DownloadChunk", (fileName, chunkID))
     response = sendReqToClient(downloadRequest, srcIP, srcPort)
     logging.debug(f"Download chunk Response: status - {response.Status}, body - {response.Body}")
-    if response is not None:
-        registerResponse = registerChunk(fileName,chunkID)
-        logging.debug(f"Register chunk Response: status - {registerResponse.Status}, body - {registerResponse.Body}")
-        file_data[chunkID] = response.Body
+    if response is None:
+        raise Exception("Could not download chunk {chunkId} for file {fileName}")
+    chunkData = response.Body
+    #Verify chunk
+    if getHash(chunkData) != hashValue:
+        raise Exception("Hash mismatch for chunk {chunkId} of file {fileName}")
+    registerResponse = registerChunk(fileName,chunkID)
+    logging.debug(f"Register chunk Response: status - {registerResponse.Status}, body - {registerResponse.Body}")
+    file_data[chunkID] = chunkData
 
 def downloadFile(fileName):
     #get list of chunks from server
     #TODO use multi-threading to download chunks parallely
     #once chunk is received, verify the chunk 
-    getFileMetadata(fileName)
-    fileMetadata = globFileMetadata[fileName]
-    num_chunks = len(fileMetadata.chunkInfo)
-    file_data = [None]*num_chunks
-    chunkToPeer = rarestPeers(fileMetadata.chunkInfo)
-    dloadThreads = []
-    for chunkId, peer in chunkToPeer:
-        peerIP, peerPort = peer
-        dloadThreads.append(threading.Thread(target=downloadChunk, args=[fileName,chunkId,peerIP,peerPort,file_data]))
-        logging.debug(f"Downloading chunk {chunkId} from {peer}")
-        dloadThreads[-1].start()
-        # file_data[chunkId] = downloadChunk(fileName, chunkId, peerIP, peerPort)
-    for t in dloadThreads:
-        t.join()
-    logging.debug(f"Downloaded file {fileName}, contents: {file_data}")
-    with open(getFilePath(fileName), 'wb') as f:
-        f.write(b''.join(file_data))
+    if fileName in locFileMetadataMap:
+        logging.info(f"File {fileName} already exists on device")
+        return
+    try:
+        getFileMetadata(fileName)
+        fileMetadata = globFileMetadata[fileName]
+        num_chunks = len(fileMetadata.chunkInfo)
+        file_data = [None]*num_chunks
+        chunkToPeer = rarestPeers(fileMetadata.chunkInfo)
+        dloadThreads = []
+        for chunkId, peer in chunkToPeer:
+            peerIP, peerPort = peer
+            hashValue = fileMetadata.chunkInfo[chunkId].hashValue
+            dloadThreads.append(threading.Thread(target=downloadChunk, args=[fileName,chunkId,peerIP,peerPort,hashValue,file_data]))
+            logging.debug(f"Downloading chunk {chunkId} from {peer}")
+            dloadThreads[-1].start()
+            # file_data[chunkId] = downloadChunk(fileName, chunkId, peerIP, peerPort)
+        for t in dloadThreads:
+            t.join()
+        logging.debug(f"Downloaded file {fileName}, contents: {file_data}")
+        with open(getFilePath(fileName), 'wb') as f:
+            f.write(b''.join(file_data))
+        locFileMetadataMap[fileName] = fileMetadata
+    except:
+        logging.error(f"Error in downloading file: {fileName}") 
 
 ##########################################
 ##############  UPLOAD PART  #############
