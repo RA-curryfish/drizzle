@@ -3,7 +3,7 @@ from utils import *
 import threading
 import os
 import sys
-
+import traceback
 CLIENT_IP = socket.gethostbyname(socket.gethostname())
 CLIENT_PORT = None
 FILES_DIR = ""
@@ -126,11 +126,13 @@ def downloadChunk(fileName,chunkID, srcIP, srcPort, hashValue, file_data):
     response = sendReqToClient(downloadRequest, srcIP, srcPort)
     logging.debug(f"Download chunk Response: status - {response.Status}, body - {response.Body}")
     if response is None:
+        logging.error(f"Download chunk Response: status - {response.Status}, body - {response.Body}")
         raise Exception("Could not download chunk {chunkId} for file {fileName}")
     chunkData = response.Body
     #Verify chunk
     if getHash(chunkData) != hashValue:
-        raise Exception("Hash mismatch for chunk {chunkId} of file {fileName}")
+        logging.debug(f"Hash mismatch for chunk {chunkId} of file {fileName}")
+        raise Exception()
     registerResponse = registerChunk(fileName,chunkID)
     logging.debug(f"Register chunk Response: status - {registerResponse.Status}, body - {registerResponse.Body}")
     file_data[chunkID] = chunkData
@@ -146,6 +148,8 @@ def downloadFile(fileName):
         getFileMetadata(fileName)
         fileMetadata = globFileMetadata[fileName]
         num_chunks = len(fileMetadata.chunkInfo)
+        for chunkID, cinfo in enumerate(fileMetadata.chunkInfo):
+            logging.info(f"Chunk {chunkID} present in {cinfo.peers}")
         file_data = [None]*num_chunks
         chunkToPeer = rarestPeers(fileMetadata.chunkInfo)
         dloadThreads = []
@@ -153,7 +157,7 @@ def downloadFile(fileName):
             peerIP, peerPort = peer
             hashValue = fileMetadata.chunkInfo[chunkId].hashValue
             dloadThreads.append(threading.Thread(target=downloadChunk, args=[fileName,chunkId,peerIP,peerPort,hashValue,file_data]))
-            logging.debug(f"Downloading chunk {chunkId} from {peer}")
+            logging.info(f"Downloading chunk {chunkId} from {peer}")
             dloadThreads[-1].start()
             # file_data[chunkId] = downloadChunk(fileName, chunkId, peerIP, peerPort)
         for i,t in enumerate(dloadThreads):
@@ -164,7 +168,8 @@ def downloadFile(fileName):
             f.write(b''.join(file_data))
         locFileMetadataMap[fileName] = fileMetadata
     except:
-        logging.error(f"Error in downloading file: {fileName}") 
+        logging.error(f"Error in downloading file: {fileName}")
+        traceback.print_exc()
 
 ##########################################
 ##############  UPLOAD PART  #############
@@ -198,7 +203,6 @@ def initClient():
     upload_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     upload_socket.bind((CLIENT_IP,CLIENT_PORT))
     upload_socket.listen(10) #Max 10 peers in the queue
-    logging.debug("sdfsdfdsffdgdgdgdfg")
     while True:
         client_socket, addr = upload_socket.accept()
         logging.debug(f"Received download req from client: {client_socket}, {addr}")
@@ -216,8 +220,8 @@ if __name__ == "__main__":
     registerNode(fileList)
     getFileList()
     logging.debug(f"Files after rq: {globFileList}")
-    logging.debug(f"File Metadata before: {globFileMetadata}")
-    getFileMetadata('xyz')
+    # logging.debug(f"File Metadata before: {globFileMetadata}")
+    # getFileMetadata('xyz')
     # logging.debug(f"File Metadata after: {len(locFileMetadataMap['abd'].chunkInfo)}")
     if 'abd' not in fileList:
         downloadFile('abd')

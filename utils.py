@@ -7,7 +7,7 @@ import pickle
 import logging
 import sys
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 # logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 # Request type values
 RegisterNode = "RegisterNode"
@@ -36,9 +36,10 @@ def deserialize(serText): #Input bytes, return object
 def printProgressBar(index, total, label):
     n_bar = 50  # Progress bar width
     progress = index / total
-    sys.stdout.write('\r')
-    sys.stdout.write(f"[{'=' * int(n_bar * progress):{n_bar}s}] {int(100 * progress)}%  {label}")
-    sys.stdout.flush()
+    # sys.stdout.write('\r')
+    # sys.stdout.write(f"[{'=' * int(n_bar * progress):{n_bar}s}] {int(100 * progress)}%  {label}")
+    # sys.stdout.flush()
+    logging.info(f"[{'=' * int(n_bar * progress):{n_bar}s}] {int(100 * progress)}%  {label}")
 
 class Request():
     def __init__(self,reqType,args):
