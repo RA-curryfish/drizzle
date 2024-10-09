@@ -1,6 +1,5 @@
 import socket
 import threading
-
 from data_structures import *
 
 peerList = set() # list of peers ??? needed???
@@ -14,7 +13,6 @@ def registerNode(peerID,clientfileMetadataMap):
     peerList.add(peerID)
     fileList.update(clientfileMetadataMap.keys())
     fileMetadataMap.update(clientfileMetadataMap)
-    # print(clientfileMetadataMap)
     out = Response(ReqStatus.SUCCESS,None)
     return out
 
@@ -25,7 +23,7 @@ def getFileList():
 
 def getFileMetadata(fileName):
     global fileMetadataMap
-    print(fileMetadataMap[fileName])
+    logging.debug(fileMetadataMap[fileName])
     out = Response(ReqStatus.SUCCESS,fileMetadataMap[fileName])
     return out
 
@@ -44,7 +42,7 @@ def registerChunk(fileName,chunkID,peerIP, peerPort):
 def processRequest(request):
     #Can be either:Register request, Get file lists, Get file info, Chunk register request
     out = None
-    print(f"Request: {request.RequestType}")
+    logging.debug(f"Request: {request.RequestType}")
     if (request.RequestType == RegisterNode):
         peerIP = request.Args[0]
         clientFileMetaDataMap = request.Args[1]
@@ -77,9 +75,9 @@ def socket_target(conn):
     #     reqdeser = deserialize(reqser)
     #     resp = processRequest(reqdeser)
     #     respser = serialize(resp)
-    #     print(peerList[0])
-    #     print(fileList[0])
-    #     print(fileMetadataMap[filename].size)
+    #     logging.debug(peerList[0])
+    #     logging.debug(fileList[0])
+    #     logging.debug(fileMetadataMap[filename].size)
     #     return
     # TESTING END
     serializedReq = bytearray()
@@ -91,7 +89,6 @@ def socket_target(conn):
     serializedReq = bytes(serializedReq)
     request = deserialize(serializedReq)
     reqResponse = processRequest(request)
-    # print(f"Res[pmse] {reqResponse}")
     serializedResp = serialize(reqResponse)
     conn.send(serializedResp)
     conn.shutdown(socket.SHUT_WR)
@@ -100,15 +97,15 @@ def initServer():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((SERVER_NAME,SERVER_PORT))
     server_socket.listen(10) #Max 10 peers in the queue
-    print(f"SERVER ON {SERVER_NAME}:{SERVER_PORT}")
+    logging.debug(f"SERVER ON {SERVER_NAME}:{SERVER_PORT}")
     ## TESTING ONLY
     # socket_target(None)
     ## TESTING END
     while True:
         client_socket, addr = server_socket.accept()
-        print(f"Received req from client: {addr}")
+        logging.debug(f"Received req from client: {addr}")
         threading.Thread(target = socket_target, args = [client_socket]).start()
-    print("does not reach")
+    logging.debug("does not reach")
 
 if __name__ == "__main__":
     initServer()
