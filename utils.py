@@ -7,7 +7,7 @@ import pickle
 import logging
 import sys
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 # logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 # Request type values
 RegisterNode = "RegisterNode"

@@ -127,19 +127,20 @@ def downloadChunk(fileName,chunkID, srcIP, srcPort, hashValue, file_data):
     logging.debug(f"Download chunk Response: status - {response.Status}, body - {response.Body}")
     if response is None:
         logging.error(f"Download chunk Response: status - {response.Status}, body - {response.Body}")
-        raise Exception("Could not download chunk {chunkId} for file {fileName}")
+        # raise Exception("Could not download chunk {chunkID} for file {fileName}")
+        return
     chunkData = response.Body
     #Verify chunk
     if getHash(chunkData) != hashValue:
-        logging.debug(f"Hash mismatch for chunk {chunkId} of file {fileName}")
-        raise Exception()
+        logging.error(f"Hash mismatch for chunk {chunkID} of file {fileName}")
+        # raise Exception()
+        return
     registerResponse = registerChunk(fileName,chunkID)
     logging.debug(f"Register chunk Response: status - {registerResponse.Status}, body - {registerResponse.Body}")
     file_data[chunkID] = chunkData
 
 def downloadFile(fileName):
     #get list of chunks from server
-    #TODO use multi-threading to download chunks parallely
     #once chunk is received, verify the chunk 
     if fileName in locFileMetadataMap:
         logging.info(f"File {fileName} already exists on device")
@@ -162,6 +163,8 @@ def downloadFile(fileName):
             # file_data[chunkId] = downloadChunk(fileName, chunkId, peerIP, peerPort)
         for i,t in enumerate(dloadThreads):
             t.join()
+            if file_data[i] is None:
+                raise Exception(f"Could not download chunk {i}")
             printProgressBar(i+1,num_chunks,fileName)
         logging.debug(f"Downloaded file {fileName}, contents: {file_data}")
         with open(getFilePath(fileName), 'wb') as f:
@@ -169,7 +172,7 @@ def downloadFile(fileName):
         locFileMetadataMap[fileName] = fileMetadata
     except:
         logging.error(f"Error in downloading file: {fileName}")
-        traceback.print_exc()
+        # traceback.print_exc()
 
 ##########################################
 ##############  UPLOAD PART  #############
