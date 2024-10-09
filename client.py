@@ -4,6 +4,7 @@ import threading
 import os
 import sys
 import random
+import traceback
 
 CLIENT_IP = socket.gethostbyname(socket.gethostname())
 CLIENT_PORT = None
@@ -68,7 +69,6 @@ def rarestPeers(chunkInfo):
     chunkList.sort(key = lambda x:len(x[1].peers) )
     for chunkId, chunk in chunkList:
         chunkToPeer.append((chunkId,chunk.peers[random.randint(0,len(chunk.peers)-1)]))
-    
     return chunkToPeer
 
 ###########################
@@ -116,8 +116,6 @@ def getFileMetadata(fileName):
 def registerChunk(fileName,chunkID):
     #Send filename and chunk ID
     # send bytes on socket
-    if chunkID%2 == 0:
-        return Response(ReqStatus.SUCCESS, None)
     request = Request(RegisterChunk, (fileName, chunkID, CLIENT_IP, CLIENT_PORT))
     response = sendReqToServer(request)
     # logging.debug(f"Response: status - {response.Status}, body - {response.Body}")
@@ -164,14 +162,16 @@ def downloadFile(fileName):
         for chunkId, peer in chunkToPeer:
             peerIP, peerPort = peer
             hashValue = fileMetadata.chunkInfo[chunkId].hashValue
-            dloadThreads.append(threading.Thread(target=downloadChunk, args=[fileName,chunkId,peerIP,peerPort,hashValue,file_data]))
+            dloadThreads.append((
+                threading.Thread(target=downloadChunk, args=[fileName,chunkId,peerIP,peerPort,hashValue,file_data]),
+                chunkId))
             logging.info(f"Downloading chunk {chunkId} from {peer}")
-            dloadThreads[-1].start()
+            dloadThreads[-1][0].start()
             # file_data[chunkId] = downloadChunk(fileName, chunkId, peerIP, peerPort)
-        for i,t in enumerate(dloadThreads):
+        for i, t, cID in enumerate(dloadThreads):
             t.join()
-            if file_data[i] is None:
-                raise Exception(f"Could not download chunk {i}")
+            if file_data[cID] is None:
+                raise Exception(f"Could not download chunk {cID}")
             printProgressBar(i+1,num_chunks,fileName)
         logging.debug(f"Downloaded file {fileName}, contents: {file_data}")
         with open(getFilePath(fileName), 'wb') as f:
@@ -179,7 +179,9 @@ def downloadFile(fileName):
         locFileMetadataMap[fileName] = fileMetadata
     except:
         logging.error(f"Error in downloading file: {fileName}")
-        # traceback.print_exc()
+        # if logging._Level == logging.DEBUG:
+        #     traceback.print_exc()
+        traceback.print_exc()
 
 ##########################################
 ##############  UPLOAD PART  #############
