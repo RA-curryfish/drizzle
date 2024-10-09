@@ -168,7 +168,8 @@ def downloadFile(fileName):
             logging.info(f"Downloading chunk {chunkId} from {peer}")
             dloadThreads[-1][0].start()
             # file_data[chunkId] = downloadChunk(fileName, chunkId, peerIP, peerPort)
-        for i, t, cID in enumerate(dloadThreads):
+        for i, thr in enumerate(dloadThreads):
+            t, cID = thr
             t.join()
             if file_data[cID] is None:
                 raise Exception(f"Could not download chunk {cID}")
