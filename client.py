@@ -3,7 +3,8 @@ from utils import *
 import threading
 import os
 import sys
-import traceback
+import random
+
 CLIENT_IP = socket.gethostbyname(socket.gethostname())
 CLIENT_PORT = None
 FILES_DIR = ""
@@ -66,7 +67,7 @@ def rarestPeers(chunkInfo):
     chunkList = list(enumerate(chunkInfo))
     chunkList.sort(key = lambda x:len(x[1].peers) )
     for chunkId, chunk in chunkList:
-        chunkToPeer.append((chunkId,chunk.peers[0]))
+        chunkToPeer.append((chunkId,chunk.peers[random.randint(0,len(chunk.peers)-1)]))
     
     return chunkToPeer
 
@@ -115,6 +116,8 @@ def getFileMetadata(fileName):
 def registerChunk(fileName,chunkID):
     #Send filename and chunk ID
     # send bytes on socket
+    if chunkID%2 == 0:
+        return Response(ReqStatus.SUCCESS, None)
     request = Request(RegisterChunk, (fileName, chunkID, CLIENT_IP, CLIENT_PORT))
     response = sendReqToServer(request)
     # logging.debug(f"Response: status - {response.Status}, body - {response.Body}")
@@ -136,8 +139,12 @@ def downloadChunk(fileName,chunkID, srcIP, srcPort, hashValue, file_data):
         # raise Exception()
         return
     registerResponse = registerChunk(fileName,chunkID)
-    logging.debug(f"Register chunk Response: status - {registerResponse.Status}, body - {registerResponse.Body}")
-    file_data[chunkID] = chunkData
+    if registerResponse is not None:
+        logging.debug(f"Register chunk Response: status - {registerResponse.Status}, body - {registerResponse.Body}")
+        file_data[chunkID] = chunkData
+        return
+    else:
+        logging.error("could not register chunk")
 
 def downloadFile(fileName):
     #get list of chunks from server
