@@ -116,6 +116,8 @@ def getFileMetadata(fileName):
 def registerChunk(fileName,chunkID):
     #Send filename and chunk ID
     # send bytes on socket
+    # if chunkID%2 == 0:
+    #     return Response(ReqStatus.SUCCESS, None)
     request = Request(RegisterChunk, (fileName, chunkID, CLIENT_IP, CLIENT_PORT))
     response = sendReqToServer(request)
     # logging.debug(f"Response: status - {response.Status}, body - {response.Body}")
@@ -237,6 +239,6 @@ if __name__ == "__main__":
     # logging.debug(f"File Metadata before: {globFileMetadata}")
     # getFileMetadata('xyz')
     # logging.debug(f"File Metadata after: {len(locFileMetadataMap['abd'].chunkInfo)}")
-    if 'abd' not in fileList:
-        downloadFile('abd')
-        getFileMetadata('abd')
+    if 'img.jpg' not in fileList:
+        downloadFile('img.jpg')
+        # getFileMetadata('abd')

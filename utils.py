@@ -7,7 +7,7 @@ import pickle
 import logging
 import sys
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 # logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 # Request type values
 RegisterNode = "RegisterNode"
@@ -18,7 +18,7 @@ RegisterChunk = "RegisterChunk"
 SERVER_PORT = 55555
 SERVER_NAME = "130.203.16.40"
 
-CHUNK_SIZE = 20
+CHUNK_SIZE = 128
 
 class ReqStatus(Enum):
     SUCCESS = 0
