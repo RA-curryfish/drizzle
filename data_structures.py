@@ -74,5 +74,5 @@ class FileMetadata():
         }
     def __str__(self):
         return str(self.toDict())
-    def addPeer(self,chunkID,peerID):
-        self.chunkInfo[chunkID].peers.append(peerID)
+    def addPeer(self,chunkID,peerID,peerPort):
+        self.chunkInfo[chunkID].peers.append((peerID,peerPort))

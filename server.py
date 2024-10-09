@@ -3,16 +3,16 @@ import threading
 
 from data_structures import *
 
-peerList = [] # list of peers ??? needed???
-fileList = [] # stores file list
+peerList = set() # list of peers ??? needed???
+fileList = set() # stores file list
 fileMetadataMap = dict() #Filename(str) to FileMetadata object
 
 def registerNode(peerID,clientfileMetadataMap):
     global peerList
     global fileList
     global fileMetadataMap
-    peerList.append(peerID)
-    fileList.extend(clientfileMetadataMap.keys())
+    peerList.add(peerID)
+    fileList.update(clientfileMetadataMap.keys())
     fileMetadataMap.update(clientfileMetadataMap)
     # print(clientfileMetadataMap)
     out = Response(ReqStatus.SUCCESS,None)
@@ -36,9 +36,9 @@ def getFileMetadata(fileName):
 #         registerChunk(fileMetaData.fileName,chunkInfo.chunkID, peerID)
 #     return Response(ReqStatus.SUCCESS,None)
     
-def registerChunk(fileName,chunkID,peerID):
+def registerChunk(fileName,chunkID,peerIP, peerPort):
     #Return register status
-    fileMetadataMap[fileName].addPeer(chunkID,peerID)
+    fileMetadataMap[fileName].addPeer(chunkID,peerIP,peerPort)
     return Response(ReqStatus.SUCCESS,None)
 
 def processRequest(request):
@@ -59,8 +59,9 @@ def processRequest(request):
     elif (request.RequestType == RegisterChunk):
         fileName = request.Args[0]
         chunkID = request.Args[1]
-        chunk = request.Args[2]
-        out = registerChunk(fileName, chunkID, chunk)
+        peerIP = request.Args[2]
+        peerPort = request.Args[3]
+        out = registerChunk(fileName, chunkID, peerIP, peerPort)
     return out
 
 def socket_target(conn):
