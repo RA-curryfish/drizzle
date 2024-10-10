@@ -19,7 +19,15 @@ class Client:
         self.globFileList = list() # list of all files in server
         self.globFileMetadata = dict() # dict of fileName to fileMetadata
         self.registerNode(self.fileList)
-        threading.Thread(target=self.initUploadThread,args=[]).start()
+        self.stopUpload = False
+        self.uLoadThread = threading.Thread(target=self.initUploadThread,args=[])
+        self.uLoadThread.start()
+
+    def stop(self):
+        logging.debug("Stopping client")
+        self.stopUpload = True
+        self.upload_socket.shutdown(socket.SHUT_RDWR)
+        self.uLoadThread.join()
 
     ############################
     #Local functionality
@@ -81,7 +89,6 @@ class Client:
     def registerNode(self, fileList):
         #Send register request to server - pass IP address, and file list
         #Get register status - success or failure
-        print("recvd register req")
         peerIP = self.CLIENT_IP
         for fileName in fileList:
             fileMetadata = self.createFileMetadata(fileName)
@@ -218,14 +225,21 @@ class Client:
         conn.shutdown(socket.SHUT_WR)
 
     def initUploadThread(self):
-        upload_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        upload_socket.bind((self.CLIENT_IP,self.CLIENT_PORT))
+        self.upload_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.upload_socket.bind((self.CLIENT_IP,self.CLIENT_PORT))
         logging.info(f"Started peer, uploading on {(self.CLIENT_IP,self.CLIENT_PORT)}")
-        upload_socket.listen(10) #Max 10 peers in the queue
-        while True:
-            client_socket, addr = upload_socket.accept()
-            logging.debug(f"Received download req from client: {client_socket}, {addr}")
-            threading.Thread(target = self.socket_target, args = [client_socket]).start()
+        self.upload_socket.listen(10) #Max 10 peers in the queue
+        while not self.stopUpload:
+            try:
+                client_socket, addr = self.upload_socket.accept()
+                logging.debug(f"Received download req from client: {client_socket}, {addr}")
+                uLoadThreads = []
+                uLoadThreads.append(threading.Thread(target = self.socket_target, args = [client_socket]))
+                uLoadThreads[-1].start()
+            except:
+                break
+        logging.debug("Stopped uploads")
+        
 
 
 

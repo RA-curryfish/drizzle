@@ -4,10 +4,17 @@ from utils import *
 
 class Server:
     def __init__(self):
-        threading.Thread(target = self.initServer, args = []).start()
+        self.stopServer = False
+        self.serverThread = threading.Thread(target = self.initServer, args = [])
+        self.serverThread.start()
         self.peerList = set() # list of peers ??? needed???
         self.fileList = set() # stores file list
         self.fileMetadataMap = dict() #Filename(str) to FileMetadata object
+
+    def stop(self):
+        self.stopServer = True
+        self.server_socket.shutdown(socket.SHUT_RDWR)
+        self.serverThread.join()
 
     def registerNode(self, peerID,clientfileMetadataMap):
         self.peerList.add(peerID)
@@ -92,16 +99,19 @@ class Server:
         conn.shutdown(socket.SHUT_WR)
 
     def initServer(self):
-        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_socket.bind((SERVER_NAME,SERVER_PORT))
-        server_socket.listen(10) #Max 10 peers in the queue
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.bind((SERVER_NAME,SERVER_PORT))
+        self.server_socket.listen(10) #Max 10 peers in the queue
         logging.info(f"Server started on {SERVER_NAME}:{SERVER_PORT}")
         ## TESTING ONLY
         # socket_target(None)
         ## TESTING END
-        while True:
-            client_socket, addr = server_socket.accept()
-            logging.debug(f"Received req from client: {addr}")
-            threading.Thread(target = self.socket_target, args = [client_socket]).start()
-        logging.debug("does not reach")
+        while not self.stopServer:
+            try:
+                client_socket, addr = self.server_socket.accept()
+                logging.debug(f"Received req from client: {addr}")
+                threading.Thread(target = self.socket_target, args = [client_socket]).start()
+            except:
+                break
+        logging.info("Server shutting down")
 
