@@ -9,30 +9,42 @@ import sys
 
 logging.basicConfig(level=logging.INFO)
 # logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
+####################################
+# Defining constants and classes   #
+####################################
+
 # Request type values
 RegisterNode = "RegisterNode"
 GetFileList = "GetFileList"
 GetFileMetadata = "GetFileMetadata"
 RegisterChunk = "RegisterChunk"
 
+# Server info
 SERVER_PORT = 55555
 SERVER_NAME = "130.203.16.40"
 
+# Chunk size
 CHUNK_SIZE = 128
 
+# Request status
 class ReqStatus(Enum):
     SUCCESS = 0
     FAILURE = 1
 
+# Generates and retursn hash using SHA1
 def getHash(chunk):
     return hashlib.sha1(chunk).hexdigest() 
 
+# Serializer for the bytes to be sent over the network
 def serialize(obj): #Input object, return bytes
     return codecs.encode(pickle.dumps(obj), "base64")
 
+# Deserializes the bytes sent over the network back into object 
 def deserialize(serText): #Input bytes, return object
     return pickle.loads(codecs.decode(serText, "base64"))
 
+# Helper to print progress bar
 def printProgressBar(index, total, label):
     n_bar = 50  # Progress bar width
     progress = index / total
@@ -41,16 +53,19 @@ def printProgressBar(index, total, label):
     # sys.stdout.flush()
     logging.info(f"[{'=' * int(n_bar * progress):{n_bar}s}] {int(100 * progress)}%  {label}")
 
+# Class for request with request type and list of arguments
 class Request():
     def __init__(self,reqType,args):
         self.RequestType = reqType
         self.Args = args
 
+# Class for response with status and a body
 class Response():
     def __init__(self,stat,body):
         self.Status = stat
         self.Body = body
 
+# Class for chunk information containing hash value and list of peers
 class ChunkInfo():
     # def __init__(self, chunkData, hashValue, peers):
     def __init__(self, hashValue, peers):
@@ -65,6 +80,7 @@ class ChunkInfo():
             "peers": self.peers  # Assuming peers is a list of strings (peer addresses)
         }
 
+# Class for file metadata containing filename, file size, and list of chunkinfo objects
 class FileMetadata():
     def __init__(self,fileName,size,peerId,peerPort,filePath):
         self.fileName = fileName

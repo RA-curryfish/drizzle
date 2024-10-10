@@ -8,6 +8,7 @@ import traceback
 
 class Client:
 
+    # Constructor for client object. Accepts file directory the client wants to share, and port the client wants to upload to others on
     def __init__(self, files_dir, port):
         self.FILES_DIR = files_dir
         self.CLIENT_IP = socket.gethostbyname(socket.gethostname())
@@ -23,6 +24,7 @@ class Client:
         self.uLoadThread = threading.Thread(target=self.initUploadThread,args=[])
         self.uLoadThread.start()
 
+    # Wind down the client, shut down sockets, join any working thread
     def stop(self):
         logging.debug("Stopping client")
         self.stopUpload = True
@@ -30,18 +32,22 @@ class Client:
         self.uLoadThread.join()
 
     ############################
-    #Local functionality
+    #Local functionality helpers that client may need
     ############################
+    # Returns file path
     def getFilePath(self, fileName):
         return self.FILES_DIR+"/"+fileName
-
+    
+    # Returns file size
     def getFileSize(self, fileName):
         return os.path.getsize(self.getFilePath(fileName))
-
+    
+    # Creates file metadata object to store filename, size, chunk info like hashes and peers it is present in
     def createFileMetadata(self, fileName):
         fileMetadata = FileMetadata(fileName, self.getFileSize(fileName), self.CLIENT_IP, self.CLIENT_PORT, self.getFilePath(fileName))
         return fileMetadata
-
+    
+    # Creates socket, connects and sends the request to server. Returns response.
     def sendReqToServer(self, request):
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         logging.debug(f"Connecting to server: {SERVER_NAME, SERVER_PORT}")
@@ -58,6 +64,7 @@ class Client:
         # client_socket.shutdown(socket.SHUT_RD)
         return response
 
+    # Creates socket, connects and sends the request to peer. Returns response.
     def sendReqToClient(self, request, clientIP, clientPort):
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         logging.debug(f"Connecting to peer: {clientIP, clientPort}")
@@ -73,8 +80,8 @@ class Client:
         response = deserialize(response)
         return response
 
+    # Returns a map of chunk ID to (peerIP, peerPort) in the rarest order
     def rarestPeers(self, chunkInfo):
-        #return map of chunk ID to (peerIP, peerPort)
         chunkToPeer = []
         chunkList = list(enumerate(chunkInfo))
         chunkList.sort(key = lambda x:len(x[1].peers) )
@@ -83,9 +90,9 @@ class Client:
         return chunkToPeer
 
     ###########################
-    # Calls to server API
+    # Calls to server API that client needs to make
     ###########################
-
+    # Registers the current client with the file list to the server
     def registerNode(self, fileList):
         #Send register request to server - pass IP address, and file list
         #Get register status - success or failure
@@ -97,6 +104,7 @@ class Client:
         response = self.sendReqToServer(request)
         logging.debug(f"Response: status - {response.Status}, body - {response.Body}")
 
+    # Requests for current file list in the p2p system
     def getFileList(self):
         #Send get file list request to server
         #Get list of file names
@@ -111,6 +119,7 @@ class Client:
         return self.globFileList
         #Overwriting the local list
 
+    # Requests for file metadata like chunk hashes, locations of peers
     def getFileMetadata(self, fileName):
         #Get the hosts and chunk info for each node where the file is present
         request = Request(GetFileMetadata, (fileName,))
@@ -123,6 +132,7 @@ class Client:
             logging.error("File {fileName} not present in server")
             raise Exception()
 
+    # Registers the recently downloaded chunk with the server to update file metadata
     def registerChunk(self, fileName,chunkID, omitChunk):
         #Send filename and chunk ID
         # send bytes on socket
@@ -133,6 +143,7 @@ class Client:
         # logging.debug(f"Response: status - {response.Status}, body - {response.Body}")
         return response
 
+    # Downloads a particular chunk from a peer and checks hash value to ensure integrity
     def downloadChunk(self, fileName,chunkID, srcIP, srcPort, hashValue, file_data, omitChunk):
         #send
         downloadRequest = Request("DownloadChunk", (fileName, chunkID))
@@ -156,6 +167,7 @@ class Client:
         else:
             logging.error("could not register chunk")
 
+    # Downloads a particular file from a peer and rejects if at least one chunk hash mismatches. Uses rarest chunk order to decide chunk priority
     def downloadFile(self, fileName, omitChunk=False):
         #get list of chunks from server
         #once chunk is received, verify the chunk 
@@ -200,7 +212,7 @@ class Client:
     ##########################################
     ##############  UPLOAD PART  #############
     ##########################################
-            
+    # Handles uploading of a particular chunk to some other peer        
     def uploadChunk(self, request):
         fileName,chunkID = request.Args
         with open(self.getFilePath(fileName), 'rb') as f:
@@ -209,6 +221,7 @@ class Client:
             chunk = f.read(CHUNK_SIZE)
         return Response(ReqStatus.SUCCESS, chunk)
 
+    # Target function that runs when a thread is spawned that handles the requests
     def socket_target(self, conn):
         serializedReq = bytearray()
         while True: 
@@ -224,6 +237,7 @@ class Client:
         conn.send(serializedResp)
         conn.shutdown(socket.SHUT_WR)
 
+    # Sets up the upload handler of the peer and listens to any incoming requests.
     def initUploadThread(self):
         self.upload_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.upload_socket.bind((self.CLIENT_IP,self.CLIENT_PORT))

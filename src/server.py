@@ -3,6 +3,7 @@ import threading
 from utils import *
 
 class Server:
+    # Initilizer constructor of the server. Sets up empty lists and maps
     def __init__(self):
         self.stopServer = False
         self.serverThread = threading.Thread(target = self.initServer, args = [])
@@ -11,11 +12,13 @@ class Server:
         self.fileList = set() # stores file list
         self.fileMetadataMap = dict() #Filename(str) to FileMetadata object
 
+    # Stops the server by shutting down sockets and waiting for threads to wrap up.
     def stop(self):
         self.stopServer = True
         self.server_socket.shutdown(socket.SHUT_RDWR)
         self.serverThread.join()
 
+    # Handles registering of client by appending to list of peers and updating the file metadata map with whatever the client wants to share. Returns status of operation
     def registerNode(self, peerID,clientfileMetadataMap):
         self.peerList.add(peerID)
         self.fileList.update(clientfileMetadataMap.keys())
@@ -23,10 +26,12 @@ class Server:
         out = Response(ReqStatus.SUCCESS,None)
         return out
 
+    # Returns a list of files that exist in the p2p system to the requesting client.
     def getFileList(self):
         out = Response(ReqStatus.SUCCESS,self.fileList)
         return out
 
+    # Returns file metadata for a particular file to the requesting client. The metadata map is indexed into using the filename.
     def getFileMetadata(self, fileName):
         logging.debug(self.fileMetadataMap[fileName])
         out = Response(ReqStatus.SUCCESS,self.fileMetadataMap[fileName])
@@ -38,12 +43,14 @@ class Server:
     #     for chunkInfo in fileMetaData.chunkInfo:
     #         registerChunk(fileMetaData.fileName,chunkInfo.chunkID, peerID)
     #     return Response(ReqStatus.SUCCESS,None)
-        
+    
+    # Updates the peer information who just successfully downloaded this particular chunk of the file, so that newer peers may download from here as well. Returns status of operation
     def registerChunk(self, fileName,chunkID,peerIP, peerPort):
         #Return register status
         self.fileMetadataMap[fileName].addPeer(chunkID,peerIP,peerPort)
         return Response(ReqStatus.SUCCESS,None)
 
+    # Helper function that maps the request type to the correct API. Returns the result of the operation
     def processRequest(self, request):
         #Can be either:Register request, Get file lists, Get file info, Chunk register request
         out = None
@@ -67,6 +74,7 @@ class Server:
             out = self.registerChunk(fileName, chunkID, peerIP, peerPort)
         return out
 
+    # Target function of the thread that handles requests by calling process request function
     def socket_target(self, conn):
         # TESTING ONLY
         # if(conn is None):
@@ -98,6 +106,7 @@ class Server:
         conn.send(serializedResp)
         conn.shutdown(socket.SHUT_WR)
 
+    # Initializes the server by binding on port and listens to requests.
     def initServer(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((SERVER_NAME,SERVER_PORT))
