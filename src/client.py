@@ -115,8 +115,8 @@ class Client:
         response = self.sendReqToServer(request)
         logging.debug(f"Response: status - {response.Status}, body - {response.Body}")
         if response is not None:
-            self.globFileList = response.Body
-        return self.globFileList
+            self.globFileList = [f[0] for f in response.Body]
+        return response.Body
         #Overwriting the local list
 
     # Requests for file metadata like chunk hashes, locations of peers

@@ -28,7 +28,8 @@ class Server:
 
     # Returns a list of files that exist in the p2p system to the requesting client.
     def getFileList(self):
-        out = Response(ReqStatus.SUCCESS,self.fileList)
+        fileList = [(x, y.size) for x, y in self.fileMetadataMap.items()]
+        out = Response(ReqStatus.SUCCESS, fileList)
         return out
 
     # Returns file metadata for a particular file to the requesting client. The metadata map is indexed into using the filename.
